@@ -1,0 +1,36 @@
+﻿.gate {
+    min-width: 28px;
+    border: solid black 1px;
+    text-align: center;
+    padding: 0 5px;
+    background: white;
+}
+
+.selected-gate {
+    background: rgb(160, 160, 160);
+}
+
+.toolbar {
+    background: grey;
+}
+
+.toolbar .gate div {
+    cursor: pointer;
+}
+
+table {
+    table-layout: fixed;
+    width: auto;
+    padding: 0.5rem 1.5rem;
+}
+
+td {
+    max-width: 100px;
+}
+
+.wire {
+    background: repeating-linear-gradient( 180deg, black 0%, black 100% );
+    background-size: 100% 1px;
+    background-position: center;
+    background-repeat: no-repeat;
+}

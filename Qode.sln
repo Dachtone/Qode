@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34728.123
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Qode.UI", "Qode.UI\Qode.UI.csproj", "{9C780D8D-DD56-4477-8E28-B89676D90819}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Qode.Quantum", "Qode.Quantum\Qode.Quantum.csproj", "{D55E24C2-330D-4346-BF86-35183CB14EFD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Qode.LinearAlgebra", "Qode.LinearAlgebra\Qode.LinearAlgebra.csproj", "{0C9F623B-17FB-4AE4-9BA0-108FCCD634E8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9C780D8D-DD56-4477-8E28-B89676D90819}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C780D8D-DD56-4477-8E28-B89676D90819}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C780D8D-DD56-4477-8E28-B89676D90819}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C780D8D-DD56-4477-8E28-B89676D90819}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D55E24C2-330D-4346-BF86-35183CB14EFD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D55E24C2-330D-4346-BF86-35183CB14EFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D55E24C2-330D-4346-BF86-35183CB14EFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D55E24C2-330D-4346-BF86-35183CB14EFD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C9F623B-17FB-4AE4-9BA0-108FCCD634E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C9F623B-17FB-4AE4-9BA0-108FCCD634E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C9F623B-17FB-4AE4-9BA0-108FCCD634E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C9F623B-17FB-4AE4-9BA0-108FCCD634E8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3CB17283-41C9-4052-99A4-37699BAD39D8}
+	EndGlobalSection
+EndGlobal

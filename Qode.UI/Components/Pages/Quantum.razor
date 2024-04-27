@@ -1,0 +1,244 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+@using Qode.Quantum
+
+<PageTitle>Quantum</PageTitle>
+
+<div>
+    <div>
+        <table class="table table-borderless toolbar">
+            <tbody>
+                <tr>
+                    @foreach (Gate gate in Enum.GetValues(typeof(Gate)))
+                    {
+                        if (gate == Gate.Identity || gate == Gate._) continue;
+                        <td>
+                            <div class="@(SelectedGate == gate ? "selected-gate gate" : "gate")"
+                                @onclick="_ => SelectedGate = SelectedGate == gate ? null : gate">
+                                @gate
+                            </div>
+                        </td>
+                    }
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <table class="table table-borderless circuit">
+        <tbody>
+            @foreach (var w in Circuit.Select((e, i) => new { Wire = e, Index = i }))
+            {
+                <tr class="wire">
+                    @foreach (var g in w.Wire.Select((e, i) => new { Gate = e, Index = i }))
+                    {
+                        @if (g.Gate == Gate.Identity)
+                        {
+                            <td @onclick="e => PlaceSelectedGate(w.Index, g.Index)"></td>
+                            continue;
+                        }
+
+                        <td>
+                            <div class="gate" @onclick="e => RemoveOrReplaceSelectedGate(w.Index, g.Index)">@g.Gate</div>
+                        </td>
+                    }
+                    <td @onclick="e => PlaceSelectedGate(w.Index, w.Wire.Count)"></td>
+                </tr>
+            }
+            <tr class="wire">
+                @if (Circuit.Count == 0)
+                {
+                    <td @onclick="e => PlaceSelectedGate(0, 0)"></td>
+                }
+                else
+                {
+                    @foreach (var index in Circuit.First().Select((_, i) => i))
+                    {
+                        <td @onclick="e => PlaceSelectedGate(Circuit.Count, index)"></td>
+                    }
+                    <td @onclick="e => PlaceSelectedGate(Circuit.Count, Circuit.First().Count)"></td>
+                }
+            </tr>
+        </tbody>
+    </table>
+    <button class="btn btn-primary" @onclick="Simulate">Compute</button>
+    <p>Probabilities: @LastComputation</p>
+</div>
+
+@code {
+    public Gate? SelectedGate { get; set; }
+
+    public string LastComputation = "";
+
+    public List<List<Gate>> Circuit = new();
+
+    public void Simulate()
+    {
+        if (Circuit.Count == 0)
+        {
+            LastComputation = "(nothing to compute)";
+            return;
+        }
+
+        var quantumCircuit = new Qode.Quantum.Circuit(Circuit.Count);
+        for (int i = 0; i < Circuit.First().Count; i++)
+        {
+            var gates = new List<Gate>();
+            for (int j = 0; j < Circuit.Count; j++)
+            {
+                var gate = Circuit[j][i];
+                if (gate == Gate._)
+                {
+                    continue;
+                }
+
+                gates.Add(gate);
+            }
+
+            quantumCircuit.Operation(gates);
+        }
+
+        var probabilities = quantumCircuit.GetProbabilities();
+        LastComputation = string.Join("; ", probabilities);
+    }
+
+    public void PlaceSelectedGate(int i, int j)
+    {
+        if (SelectedGate is null)
+        {
+            return;
+        }
+
+        var span = (int)Math.Log2(GateMatrix.Get((Gate)SelectedGate).Order);
+
+        if (Circuit.Count == 0)
+        {
+            for (var s = 0; s < span; s++)
+            {
+                Circuit.Add([(Gate)(s == 0 ? SelectedGate : Gate._)]);
+            }
+
+            return;
+        }
+
+        if (Circuit.Count < i + span)
+        {
+            for (var s = 0; s < i + span - Circuit.Count; s++)
+            {
+                var emptyWire = new List<Gate>();
+                for (int k = 0; k < Circuit.First().Count; k++)
+                {
+                    emptyWire.Add(Gate.Identity);
+                }
+
+                Circuit.Add(emptyWire);
+            }
+        }
+
+        if (Circuit.First().Count - 1 < j)
+        {
+            for (int k = 0; k < Circuit.Count; k++)
+            {
+                Circuit[k].Add(Gate.Identity);
+            }
+        }
+
+        for (int s = i; s < i + span; s++)
+        {
+            Circuit[s][j] = s == i ? (Gate)SelectedGate : Gate._;
+        }
+    }
+
+    public void RemoveOrReplaceSelectedGate(int i, int j)
+    {
+        if (SelectedGate is null)
+        {
+            RemoveSelectedGate(i, j);
+            return;
+        }
+
+        var span = (int)Math.Log2(GateMatrix.Get((Gate)SelectedGate).Order);
+        if (Circuit.Count < i + span)
+        {
+            for (var s = 0; s < i + span - Circuit.Count; s++)
+            {
+                var emptyWire = new List<Gate>();
+                for (int k = 0; k < Circuit.First().Count; k++)
+                {
+                    emptyWire.Add(Gate.Identity);
+                }
+
+                Circuit.Add(emptyWire);
+            }
+        }
+
+        for (int s = i; s < i + span; s++)
+        {
+            Circuit[s][j] = s == i ? (Gate)SelectedGate : Gate._;
+        }
+    }
+
+    private void RemoveSelectedGate(int i, int j)
+    {
+        Circuit[i][j] = Gate.Identity;
+        for (int s = i + 1; s < Circuit.Count; s++)
+        {
+            if (Circuit[s][j] != Gate._)
+            {
+                break;
+            }
+
+            Circuit[s][j] = Gate.Identity;
+        }
+
+        var emptyIndicies = new List<int>();
+        for (int k = 0; k < Circuit.Count; k++)
+        {
+            bool nonEmpty = false;
+            foreach (var gate in Circuit[k])
+            {
+                if (gate != Gate.Identity)
+                {
+                    nonEmpty = true;
+                    break;
+                }
+            }
+
+            if (!nonEmpty)
+            {
+                emptyIndicies.Add(k);
+            }
+        }
+
+        emptyIndicies.Reverse();
+        foreach (var emprtyIndex in emptyIndicies)
+        {
+            Circuit.RemoveAt(emprtyIndex);
+        }
+
+        if (Circuit.Count == 0)
+        {
+            return;
+        }
+
+        for (int k = 0; k < Circuit.First().Count; k++)
+        {
+            bool nonEmpty = false;
+            for (int p = 0; p < Circuit.Count; p++)
+            {
+                if (Circuit[p][k] != Gate.Identity)
+                {
+                    nonEmpty = true;
+                    break;
+                }
+            }
+
+            if (!nonEmpty)
+            {
+                foreach (var wire in Circuit)
+                {
+                    wire.RemoveAt(k);
+                }
+            }
+        }
+    }
+}
