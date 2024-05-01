@@ -51,8 +51,7 @@ namespace Qode.Quantum
 
         public Matrix<Complex> State { get; private set; }
 
-        // ToDo: Rename
-        public void Set(Gate[,] operations)
+        public void Operation(Gate[,] operations)
         {
             for (int i = 0; i < operations.GetLength(0); i++)
             {
@@ -60,7 +59,7 @@ namespace Qode.Quantum
             }
         }
 
-        public void Operation(List<Gate> gates)
+        public void Operation(IEnumerable<Gate> gates)
         {
             var gateMatricies = new List<Matrix<Complex>>();
 
@@ -120,6 +119,55 @@ namespace Qode.Quantum
             }
 
             return -1;
+        }
+
+        // qubitIndex starts with 0
+        public bool Measure(int qubitIndex)
+        {
+            int power = (int)Math.Pow(2, NumberOfQubits - 1 - qubitIndex);
+            
+            // Choose a bit to sum the probabilities. For example, 0
+            int bit = 0;
+
+            double randomValue = _random.NextDouble();
+            double probability = 0.0;
+            for (int i = 0; i < State.Rows; i++)
+            {
+                // Skip if state is not related to the bit
+                // i.e. measuring for q1 = 0, skip 10, 11 
+                if (i / power % 2 != bit)
+                {
+                    continue;
+                }
+
+                probability += Complex.Pow(Complex.Abs(State[i, 0]), 2).Real;
+            }
+
+            // If the measured bit is the opposite of what we calculated
+            if (probability < randomValue)
+            {
+                // Flip the bit, flip the probability
+                bit = 1;
+                probability = 1 - probability;
+            }
+
+            var norm = Math.Sqrt(probability);
+            for (int i = 0; i < State.Rows; i++)
+            {
+                if (i / power % 2 == bit)
+                {
+                    // Normalize the state
+                    State[i, 0] /= norm;
+                }
+                else
+                {
+                    // There's no probability for this state since we measured the qubit to be in an opposite state
+                    State[i, 0] = 0;
+                }
+            }
+
+            // True for 1, false for 0
+            return bit == 1;
         }
 
         private Matrix<Complex> ComputeParallelGates(IEnumerable<Matrix<Complex>> operations)
