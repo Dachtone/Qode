@@ -1,4 +1,4 @@
-﻿@page "/"
+﻿@page "/circuit-old"
 @rendermode InteractiveServer
 
 @using Qode.Quantum
@@ -6,13 +6,14 @@
 <PageTitle>Quantum</PageTitle>
 
 <div>
+    <button class="btn btn-primary" style="margin-bottom: 15px;" @onclick="Clear">Clear</button>
     <div>
         <table class="table table-borderless toolbar">
             <tbody>
                 <tr>
                     @foreach (Gate gate in Enum.GetValues(typeof(Gate)))
                     {
-                        if (gate == Gate.Identity || gate == Gate._) continue;
+                        if (gate == Gate.I || gate == Gate._) continue;
                         <td>
                             <div class="@(SelectedGate == gate ? "selected-gate gate" : "gate")"
                                 @onclick="_ => SelectedGate = SelectedGate == gate ? null : gate">
@@ -31,7 +32,7 @@
                 <tr class="wire">
                     @foreach (var g in w.Wire.Select((e, i) => new { Gate = e, Index = i }))
                     {
-                        @if (g.Gate == Gate.Identity)
+                        @if (g.Gate == Gate.I)
                         {
                             <td @onclick="e => PlaceSelectedGate(w.Index, g.Index)"></td>
                             continue;
@@ -62,7 +63,6 @@
     </table>
     <button class="btn btn-primary" @onclick="Simulate">Compute</button>
     <p>Probabilities: @LastComputation</p>
-    <button class="btn btn-primary" @onclick="GoTest">Test</button>
 </div>
 
 @code {
@@ -72,10 +72,11 @@
 
     public List<List<Gate>> Circuit = new();
 
-    public void GoTest()
+    public void Clear()
     {
-        new Qode.Quantum.Circuit(2).Test();
-        return;
+        SelectedGate = null;
+        Circuit.Clear();
+        LastComputation = "";
     }
 
     public void Simulate()
@@ -105,7 +106,8 @@
         }
 
         var probabilities = quantumCircuit.GetProbabilities();
-        LastComputation = string.Join("; ", probabilities);
+        var result = probabilities.Select(e => e.ToString("0.000"));
+        LastComputation = string.Join("; ", result);
     }
 
     public void PlaceSelectedGate(int i, int j)
@@ -134,7 +136,7 @@
                 var emptyWire = new List<Gate>();
                 for (int k = 0; k < Circuit.First().Count; k++)
                 {
-                    emptyWire.Add(Gate.Identity);
+                    emptyWire.Add(Gate.I);
                 }
 
                 Circuit.Add(emptyWire);
@@ -145,7 +147,7 @@
         {
             for (int k = 0; k < Circuit.Count; k++)
             {
-                Circuit[k].Add(Gate.Identity);
+                Circuit[k].Add(Gate.I);
             }
         }
 
@@ -171,7 +173,7 @@
                 var emptyWire = new List<Gate>();
                 for (int k = 0; k < Circuit.First().Count; k++)
                 {
-                    emptyWire.Add(Gate.Identity);
+                    emptyWire.Add(Gate.I);
                 }
 
                 Circuit.Add(emptyWire);
@@ -186,7 +188,7 @@
 
     private void RemoveSelectedGate(int i, int j)
     {
-        Circuit[i][j] = Gate.Identity;
+        Circuit[i][j] = Gate.I;
         for (int s = i + 1; s < Circuit.Count; s++)
         {
             if (Circuit[s][j] != Gate._)
@@ -194,7 +196,7 @@
                 break;
             }
 
-            Circuit[s][j] = Gate.Identity;
+            Circuit[s][j] = Gate.I;
         }
 
         var emptyIndicies = new List<int>();
@@ -203,7 +205,7 @@
             bool nonEmpty = false;
             foreach (var gate in Circuit[k])
             {
-                if (gate != Gate.Identity)
+                if (gate != Gate.I)
                 {
                     nonEmpty = true;
                     break;
@@ -232,7 +234,7 @@
             bool nonEmpty = false;
             for (int p = 0; p < Circuit.Count; p++)
             {
-                if (Circuit[p][k] != Gate.Identity)
+                if (Circuit[p][k] != Gate.I)
                 {
                     nonEmpty = true;
                     break;

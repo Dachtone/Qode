@@ -8,8 +8,8 @@ namespace Qode.Quantum
         public void Go()
         {
             var circuit = new Circuit(2);
-            circuit.Operation([Gate.Hadamard, Gate.Identity]);
-            circuit.Operation([Gate.CNot]);
+            circuit.Operation([Gate.H, Gate.I]);
+            circuit.Operation([Gate.CNOT]);
 
             var probabilities = circuit.GetProbabilities();
 

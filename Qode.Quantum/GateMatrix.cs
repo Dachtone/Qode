@@ -10,10 +10,12 @@ namespace Qode.Quantum
             return Matricies[gate];
         }
 
+        public static int GetOperatorCount(Gate gate) => (int)Math.Log2(Get(gate).Order);
+
         private static readonly Dictionary<Gate, Matrix<Complex>> Matricies = new()
         {
             {
-                Gate.Identity,
+                Gate.I,
                 new Complex[,]
                 {
                     { 1, 0, },
@@ -21,7 +23,7 @@ namespace Qode.Quantum
                 }
             },
             {
-                Gate.Hadamard,
+                Gate.H,
                 new Complex[,]
                 {
                     { 1 / Math.Sqrt(2), 1 / Math.Sqrt(2), },
@@ -29,7 +31,7 @@ namespace Qode.Quantum
                 }
             },
             {
-                Gate.CNot,
+                Gate.CNOT,
                 new Complex[,]
                 {
                     { 1, 0, 0, 0, },
@@ -39,7 +41,7 @@ namespace Qode.Quantum
                 }
             },
             {
-                Gate.FlipCNot,
+                Gate.FCNOT,
                 new Complex[,]
                 {
                     { 1, 0, 0, 0 },
@@ -49,7 +51,7 @@ namespace Qode.Quantum
                 }
             },
             {
-                Gate.PauliX,
+                Gate.PX,
                 new Complex[,]
                 {
                     { 0, 1, },
@@ -57,7 +59,7 @@ namespace Qode.Quantum
                 }
             },
             {
-                Gate.PauliY,
+                Gate.PY,
                 new Complex[,]
                 {
                     { new(0, 0), new(0, -1), },
@@ -65,7 +67,7 @@ namespace Qode.Quantum
                 }
             },
             {
-                Gate.PauliZ,
+                Gate.PZ,
                 new Complex[,]
                 {
                     { 1, 0, },
@@ -73,7 +75,7 @@ namespace Qode.Quantum
                 }
             },
             {
-                Gate.SqrtNot,
+                Gate.X,
                 new Complex[,]
                 {
                     { new Complex(1, 1) / 2, new Complex(1, -1) / 2, },
@@ -97,7 +99,7 @@ namespace Qode.Quantum
                 }
             },
             {
-                Gate.Swap,
+                Gate.SWAP,
                 new Complex[,]
                 {
                     { 1, 0, 0, 0, },

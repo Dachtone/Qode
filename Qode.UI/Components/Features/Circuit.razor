@@ -1,0 +1,274 @@
+﻿@using System.Linq;
+@using Qode.Quantum;
+
+<style>
+    .gate-toolbar-selected-item {
+        color: var(--mud-palette-info-darken);
+        background-color: var(--mud-palette-info-hover);
+    }
+
+    .gate {
+        padding: 0;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .gate-span-1 {
+        height: 44px;
+    }
+
+    .gate-span-2 {
+        height: 100px;
+    }
+
+    .gate-span-3 {
+        height: 156px;
+    }
+
+    .circuit {
+        display: flex;
+        margin-left: 20px;
+        background: repeating-linear-gradient( 180deg, white 0%, white 100% );
+    }
+</style>
+
+<MudGrid>
+    <MudItem xs="1" />
+    <MudItem xs="11">
+        <MudStack Row="true">
+            @foreach (var item in _headerItems)
+            {
+                <MudPaper Class="@(SelectedItem == item ? "gate-toolbar-selected-item gate" : "gate")"
+                          @onclick="_ => SelectedItem = SelectedItem == item ? null : item">
+                    @item.Gate
+                </MudPaper>
+            }
+        </MudStack>
+    </MudItem>
+
+    <MudItem xs="1">
+        <MudStack>
+            @foreach (int i in Enumerable.Range(1, GetQubitCount()))
+            {
+                <MudPaper Class="@GetGateClass(null)">
+                    Q
+                    @i
+                </MudPaper>
+            }
+        </MudStack>
+    </MudItem>
+    <MudItem xs="11">
+        <MudStack Row="true">
+            @foreach (var operation in CircuitItems.Select((e, i) => new { Item = e, Index = i }))
+            {
+                <MudStack>
+                    @foreach (var gate in CircuitItems[operation.Index].Select((e, i) => new { Item = e, Index = i }))
+                    {
+                        <MudPaper Class="@GetGateClass(gate.Item)"
+                                    @onclick="_ => ClickGate(operation.Index, gate.Index)">
+                            @gate.Item.Gate
+                        </MudPaper>
+                    }
+                </MudStack>
+            }
+        </MudStack>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private void ClickGate(int operation, int qubit)
+    {
+        // Removing a gate
+        if (SelectedItem is null)
+        {
+            if (CircuitItems[operation][qubit].Gate == Gate.I)
+            {
+                // Do nothing if the clicked gate is an Identity gate
+                return;
+            }
+
+            // Replace the span with Identity gates
+            for (int i = 0; i < CircuitItems[operation][qubit].Span - 1; i++)
+            {
+                CircuitItems[operation].Insert(qubit + 1, CreateIdentityGate());
+            }
+
+            // Replace the clicked gate with Identity gate
+            CircuitItems[operation][qubit] = CreateIdentityGate();
+
+            // If the current operation is empty, delete the operation
+            if (CircuitItems[operation].All(e => e.Gate == Gate.I))
+            {
+                CircuitItems.RemoveAt(operation);
+            }
+
+            CleanUpEmptyWires();
+
+            return;
+        }
+
+        int spanDifference = CircuitItems[operation][qubit].Span - SelectedItem.Span;
+
+        // Add as many Identity gates as there are less spans
+        for (int i = 0; i < CircuitItems[operation][qubit].Span - SelectedItem.Span; i++)
+        {
+            CircuitItems[operation].Insert(qubit + 1, CreateIdentityGate());
+        }
+
+        // Replacing a gate
+        CircuitItems[operation][qubit] = SelectedItem;
+
+        // Remove empty wires
+        if (spanDifference > 0)
+        {
+            CleanUpEmptyWires();
+        }
+
+        // Remove gates that overlap with the new gate's span
+        for (int i = 0; i < SelectedItem.Span - 1; i++)
+        {
+            if (qubit + 1 >= CircuitItems[operation].Count)
+            {
+                // No more gates
+                break;
+            }
+
+            // Remove the next gate after the new one
+            // (because we're deleting items, the list shifts, so we always delete at the same index)
+            CircuitItems[operation].RemoveAt(qubit + 1);
+        }
+
+        // Add the Identity gate if the new gate is the last one
+        if (CircuitItems[operation].Last() == SelectedItem)
+        {
+            CircuitItems[operation].Add(CreateIdentityGate());
+        }
+
+        // Total span (in number of 1-operator gates)
+        int totalSpan = CircuitItems[operation].Aggregate(0, (a, e) => a + e.Span);
+
+        // Add new empty operation if the new gate is on the last current operation
+        if (operation == CircuitItems.Count - 1)
+        {
+            CircuitItems.Add(new());
+        }
+
+        // Add new empty qubit wire if the new gate is on the last current wire
+        foreach (var operationList in CircuitItems)
+        {
+            if (operationList == CircuitItems[operation])
+            {
+                // Skip the operation if it's the one clicked on
+                continue;
+            }
+
+            var currentTotalSpan = operationList.Aggregate(0, (a, e) => a + e.Span);
+            for (int i = 0; i < totalSpan - currentTotalSpan; i++)
+            {
+                // Add as many Identity gates as there are missing 1-op spans
+                operationList.Add(CreateIdentityGate());
+            }
+        }
+    }
+
+    private void CleanUpEmptyWires()
+    {
+        // Fill out a span table
+        var spanTable = new List<List<(bool IsIdentity, int GateIndex)>>();
+        for (int i = 0; i < CircuitItems.Count; i++)
+        {
+            var operationList = CircuitItems[i];
+            var spanColumn = new List<(bool, int)>();
+            for (int gateIndex = 0; gateIndex < operationList.Count - 1; gateIndex++)
+            {
+                for (int j = 0; j < operationList[gateIndex].Span; j++)
+                {
+                    // True if Identity, index of qubit
+                    spanColumn.Add((operationList[gateIndex].Gate == Gate.I, gateIndex));
+                }
+            }
+
+            spanTable.Add(spanColumn);
+        }
+
+        // Remove empty wires according to the span table
+        // Reverse order so that the shifting inicies do not affect the algorithm
+        for (int i = spanTable.First().Count - 1; i >= 0; i--)
+        {
+            bool emptyWire = true;
+            for (int j = 0; j < spanTable.Count; j++)
+            {
+                if (!spanTable[j][i].IsIdentity)
+                {
+                    emptyWire = false;
+                    break;
+                }
+            }
+
+            if (!emptyWire)
+            {
+                continue;
+            }
+
+            for (int j = 0; j < spanTable.Count; j++)
+            {
+                CircuitItems[j].RemoveAt(spanTable[j][i].GateIndex);
+            }
+        }
+    }
+
+    public void Clear()
+    {
+        SelectedItem = null;
+        CircuitItems = GetEmptyCircuit();
+
+        StateHasChanged();
+    }
+
+    private string GetGateClass(CircuitGate? item) => item is null ? "gate gate-span-1" : $"gate gate-span-{item.Span}";
+
+    private int GetQubitCount() => CircuitItems.First().Aggregate(0, (a, e) => a + e.Span);
+
+    private CircuitGate CreateIdentityGate() => new CircuitGate() { Gate = Gate.I, Span = 1 };
+
+    private List<CircuitGate> _headerItems = Enum.GetValues(typeof(Gate))
+        .Cast<Gate>()
+        .Where(e => e != Gate.I && e != Gate._)
+        .Select(e => new CircuitGate()
+        {
+            Gate = e,
+            Span = GateMatrix.GetOperatorCount(e),
+        })
+        .ToList();
+
+    private CircuitGate? SelectedItem = null;
+
+    public List<List<CircuitGate>> CircuitItems = GetEmptyCircuit();
+
+    private static List<List<CircuitGate>> GetEmptyCircuit()
+    {
+        return new()
+        {
+            new()
+            {
+                new()
+                {
+                    Gate = Gate.I,
+                    Span = 1,
+                },
+            },
+        };
+    }
+
+    public int NumberOfOperations { get => CircuitItems.Count - 1; }
+    public int NumberOfQubits { get => CircuitItems.Count == 0 ? 0 : CircuitItems.First().Count - 1; }
+
+    public class CircuitGate
+    {
+        public Gate Gate { get; init; }
+        public int Span { get; set; }
+    }
+}

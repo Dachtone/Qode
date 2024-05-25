@@ -1,0 +1,31 @@
+﻿.gate-toolbar-selected-item {
+    color: var(--mud-palette-info-darken);
+    background-color: var(--mud-palette-info-hover);
+}
+
+.gate {
+    padding: 0;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gate-span-1 {
+    height: 44px;
+}
+
+.gate-span-2 {
+    height: 100px;
+}
+
+.gate-span-3 {
+    height: 156px;
+}
+
+.circuit {
+    display: flex;
+    margin-left: 20px;
+    background: repeating-linear-gradient( 180deg, white 0%, white 100% );
+}

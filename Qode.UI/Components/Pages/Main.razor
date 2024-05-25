@@ -1,0 +1,89 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+@using MudBlazor
+@using Qode.Quantum
+
+<PageTitle>Qode</PageTitle>
+
+<MudPaper Class="pa-3">
+    <MudToolBar Class="gap-4">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Simulate">Simulate</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="Clear">Clear</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Default">Save</MudButton>
+        <MudSpacer />
+        <MudMenu Label="Resource">
+            <MudMenuItem>Backend</MudMenuItem>
+            <MudMenuItem Disabled="true">WebAssembly</MudMenuItem>
+            <MudMenuItem Disabled="true">Super Computer</MudMenuItem>
+            <MudMenuItem Disabled="true">Quantum Computer</MudMenuItem>
+        </MudMenu>
+    </MudToolBar>
+    <Circuit @ref="_circuit" />
+</MudPaper>
+
+@if (LastSimulationQubits is not null)
+{
+    <MudPaper Class="pa-3">
+        <MudChart
+            ChartType="ChartType.Bar"
+            ChartSeries="@LastSimulationChart"
+            XAxisLabels="@LastSimulationQubits"
+            ChartOptions="@(new() { YAxisTicks = 100, MaxNumYAxisTicks = 100 })"
+            Width="100%"
+            Height="350px" />
+    </MudPaper>
+}
+
+@code {
+    private Qode.UI.Components.Features.Circuit _circuit;
+
+    private List<ChartSeries> LastSimulationChart { get; set; } = new()
+    {
+        new()
+        {
+            Name = "Probabilities",
+            Data = null,
+        }
+    };
+
+    private string[]? LastSimulationQubits { get; set; }
+
+    private void Clear()
+    {
+        _circuit.Clear();
+
+        LastSimulationChart.First().Data = null;
+        LastSimulationQubits = null;
+    }
+
+    private void Simulate()
+    {
+        if (_circuit.NumberOfQubits < 2)
+        {
+            return;
+        }
+
+        var quantumCircuit = new Qode.Quantum.Circuit(_circuit.NumberOfQubits);
+
+        var circuitItems = _circuit.CircuitItems;
+        for (int i = 0; i < circuitItems.Count - 1; i++)
+        {
+            var operation = new List<Gate>();
+            for (int j = 0; j < circuitItems[i].Count - 1; j++)
+            {
+                operation.Add(circuitItems[i][j].Gate);
+            }
+
+            quantumCircuit.Operation(operation);
+        }
+
+        var probabilities = quantumCircuit
+            .GetProbabilities()
+            .Select(e => e * 100.0)
+            .ToArray();
+        LastSimulationChart.First().Data = probabilities;
+
+        LastSimulationQubits = Enumerable.Range(1, probabilities.Count()).Select(i => $"S{i}").ToArray();
+    }
+}

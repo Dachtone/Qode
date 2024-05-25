@@ -1,0 +1,21 @@
+version: '2'
+
+services:
+    application:
+        restart: always
+        build: ./src
+        expose:
+            - "8000"
+        depends_on:
+            - postgres
+
+    postgres:
+        image: postgres:9.6
+        ports:
+            - "5432:5432"
+        environment:
+            - POSTGRES_USER=user
+            - POSTGRES_PASSWORD=password
+            - POSTGRES_DB=database
+        volumes:
+            - ./data/postgres:/var/lib/postgresql/data
