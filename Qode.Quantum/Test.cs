@@ -11,7 +11,7 @@ namespace Qode.Quantum
             circuit.Operation([Gate.H, Gate.I]);
             circuit.Operation([Gate.CNOT]);
 
-            var probabilities = circuit.GetProbabilities();
+            var probabilities = circuit.GetProbabilitiesOfStates();
 
             var statistics = new double[circuit.State.Rows];
             var shots = 1000;

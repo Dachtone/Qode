@@ -1,16 +1,51 @@
 ﻿@page "/"
+@page "/Circuit/{CircuitId:int}"
+
 @rendermode InteractiveServer
 
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
 @using MudBlazor
+@using Qode.Infrastructure
+@using Qode.LinearAlgebra
 @using Qode.Quantum
+@using Qode.UI.Models
+@using System.Security.Claims
+@using Qode.UI.Utils
+@using System.Numerics
+
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <PageTitle>Qode</PageTitle>
+
+<style>
+    .simulation-result p {
+        display: ruby;
+    }
+</style>
 
 <MudPaper Class="pa-3">
     <MudToolBar Class="gap-4">
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Simulate">Simulate</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="Clear">Clear</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Default">Save</MudButton>
+        <AuthorizeView>
+            <Authorized>
+                <MudButton Variant="Variant.Filled" Color="Color.Default" @onclick="OpenSaveDialog">Save</MudButton>
+            </Authorized>
+            <NotAuthorized>
+                <MudTooltip Text="Login to save circuit">
+                    <MudButton Variant="Variant.Filled" Color="Color.Default" Disabled="true">Save</MudButton>
+                </MudTooltip>
+            </NotAuthorized>
+        </AuthorizeView>
+        @if (CircuitName is not null)
+        {
+            <MudText Typo="Typo.h5">@CircuitName</MudText>
+        }
         <MudSpacer />
         <MudMenu Label="Resource">
             <MudMenuItem>Backend</MudMenuItem>
@@ -19,42 +54,162 @@
             <MudMenuItem Disabled="true">Quantum Computer</MudMenuItem>
         </MudMenu>
     </MudToolBar>
-    <Circuit @ref="_circuit" />
+    <Circuit @ref="_circuit" InitialCircuitItems="InitialCircuitItems" />
 </MudPaper>
 
-@if (LastSimulationQubits is not null)
+@if (SimulationResults is not null)
 {
-    <MudPaper Class="pa-3">
-        <MudChart
-            ChartType="ChartType.Bar"
-            ChartSeries="@LastSimulationChart"
-            XAxisLabels="@LastSimulationQubits"
-            ChartOptions="@(new() { YAxisTicks = 100, MaxNumYAxisTicks = 100 })"
-            Width="100%"
-            Height="350px" />
-    </MudPaper>
+    <MudGrid Class="pa-3">
+        <MudItem xs="3">
+            <MudPaper Class="pa-3">
+                <MudChart
+                    ChartType="ChartType.Bar"
+                    ChartSeries="@SimulationStateProbabilities"
+                    XAxisLabels="@(SimulationStateProbabilities.First().Data.Length > 16
+                        ? []
+                        : Enumerable.Range(1, SimulationStateProbabilities.First().Data.Length + 1).Select(i => $"S{i}").ToArray())"
+                    ChartOptions="@(new() { YAxisTicks = 5, MaxNumYAxisTicks = 15, ChartPalette = [Colors.Amber.Default] })"
+                    Width="100%"
+                    Height="350px" />
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="3">
+            <MudPaper Class="pa-3">
+                <MudChart
+                    ChartType="ChartType.Bar"
+                    ChartSeries="@SimulationQubitProbabilities"
+                    XAxisLabels="@(Enumerable.Range(1, _circuit.NumberOfQubits + 1).Select(i => $"Q{i}").ToArray())"
+                    ChartOptions="@(new() { YAxisTicks = 5, MaxNumYAxisTicks = 15 })"
+                    Width="100%"
+                    Height="350px" />
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="3">
+            <MudPaper Class="pa-3">
+                <MudList>
+                    <MudListSubheader>
+                        Results
+                        
+                    </MudListSubheader>
+                    @foreach ((bool result, int index) in SimulationResults.Select((e, i) => (e, i)))
+                    {
+                        <MudListItem Class="simulation-result">
+                            <MudText Typo="Typo.body1">Q</MudText>
+                            <MudText Typo="Typo.body2">@(index + 1)</MudText>
+                            <MudText Typo="Typo.body1"> = </MudText>
+                            <MudChip Color="@(result ? Color.Success : Color.Error)">
+                                @(result ? "1" : "0")
+                            </MudChip>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                </MudList>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="3">
+            <MudPaper Class="pa-3">
+                <MudChart
+                    ChartType="ChartType.Bar"
+                    ChartSeries="@SimulationResultsDistribution"
+                    XAxisLabels="@(Enumerable.Range(1, _circuit.NumberOfQubits + 1).Select(i => $"Q{i}").ToArray())"
+                    ChartOptions="@(new() { YAxisTicks = 5, MaxNumYAxisTicks = 15, ChartPalette = [Colors.DeepPurple.Default] })"
+                    Width="100%"
+                    Height="350px" />
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
 }
 
 @code {
+    [Parameter]
+    public int? CircuitId { get; set; }
+
+    private static readonly int NumberOfShots = 100;
+
+    private List<List<CircuitGate>>? InitialCircuitItems { get; set; }
+    private string? CircuitName { get; set; }
+    private bool IsOwn { get; set; } = false;
+
     private Qode.UI.Components.Features.Circuit _circuit;
 
-    private List<ChartSeries> LastSimulationChart { get; set; } = new()
+    private List<ChartSeries> SimulationStateProbabilities { get; set; } = new()
     {
         new()
         {
-            Name = "Probabilities",
+            Name = "State Probabilities",
             Data = null,
         }
     };
 
-    private string[]? LastSimulationQubits { get; set; }
+    private List<ChartSeries> SimulationQubitProbabilities { get; set; } = new()
+    {
+        new()
+        {
+            Name = "Qubit Probabilities",
+            Data = null,
+        }
+    };
+
+    private IEnumerable<bool>? SimulationResults { get; set; }
+
+    private List<ChartSeries> SimulationResultsDistribution { get; set; } = new()
+    {
+        new()
+        {
+            Name = $"Results Distribution ({NumberOfShots} shots)",
+            Data = null,
+        }
+    };
+
+    private async Task OpenSaveDialog()
+    {
+        var parameters = new DialogParameters<SaveDialog>();
+        parameters.Add(x => x.Id, IsOwn ? CircuitId : null);
+        parameters.Add(x => x.InitialName, CircuitName);
+        parameters.Add(x => x.Circuit, _circuit.GetCircuit());
+
+        var dialog = await DialogService.ShowAsync<SaveDialog>("Save", parameters, new DialogOptions()
+        {
+            CloseOnEscapeKey = true,
+        });
+
+        var result = await dialog.Result;
+        var resultInfo = result.Data as (int Id, string Name)?;
+
+        Snackbar.Clear();
+        if (result.Canceled)
+        {
+            return;
+        }
+
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        if (resultInfo is not null)
+        {
+            CircuitName = resultInfo.Value.Name;
+            IsOwn = true;
+            Snackbar.Add("Saved", Severity.Success);
+
+            if (CircuitId != resultInfo.Value.Id)
+            {
+                Navigation.NavigateTo($"/Circuit/{resultInfo.Value.Id}", false);
+            }
+        }
+        else
+        {
+            Snackbar.Add("Unable to save", Severity.Error);
+        }
+    }
 
     private void Clear()
     {
         _circuit.Clear();
 
-        LastSimulationChart.First().Data = null;
-        LastSimulationQubits = null;
+        SimulationStateProbabilities.First().Data = null;
+        SimulationQubitProbabilities.First().Data = null;
+        SimulationResults = null;
+        SimulationResultsDistribution.First().Data = null;
+
+        InitialCircuitItems = null;
     }
 
     private void Simulate()
@@ -64,26 +219,69 @@
             return;
         }
 
-        var quantumCircuit = new Qode.Quantum.Circuit(_circuit.NumberOfQubits);
+        var quantumCircuit = new Qode.Quantum.Circuit(_circuit.NumberOfQubits, _circuit.GetCircuit());
+        var state = new Matrix<Complex>(quantumCircuit.State);
 
-        var circuitItems = _circuit.CircuitItems;
-        for (int i = 0; i < circuitItems.Count - 1; i++)
-        {
-            var operation = new List<Gate>();
-            for (int j = 0; j < circuitItems[i].Count - 1; j++)
-            {
-                operation.Add(circuitItems[i][j].Gate);
-            }
-
-            quantumCircuit.Operation(operation);
-        }
-
-        var probabilities = quantumCircuit
-            .GetProbabilities()
+        var stateProbabilities = quantumCircuit
+            .GetProbabilitiesOfStates()
             .Select(e => e * 100.0)
             .ToArray();
-        LastSimulationChart.First().Data = probabilities;
+        SimulationStateProbabilities.First().Data = stateProbabilities;
 
-        LastSimulationQubits = Enumerable.Range(1, probabilities.Count()).Select(i => $"S{i}").ToArray();
+        var qubitProbabilities = quantumCircuit
+            .GetProbabilitiesOfQubits()
+            .Select(e => e * 100.0)
+            .ToArray();
+        SimulationQubitProbabilities.First().Data = qubitProbabilities;
+
+        SimulationResults = Enumerable.Range(0, _circuit.NumberOfQubits).Select(e => quantumCircuit.Measure(e));
+
+        SimulationResultsDistribution.First().Data = new double[_circuit.NumberOfQubits];
+        for (int i = 0; i < NumberOfShots; i++)
+        {
+            quantumCircuit.State = new Matrix<Complex>(state);
+            for (int qubit = 0; qubit < _circuit.NumberOfQubits; qubit++)
+            {
+                SimulationResultsDistribution.First().Data[qubit] += quantumCircuit.Measure(qubit) ? 100.0 / NumberOfShots : 0.0;
+            }
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (CircuitId is null)
+        {
+            return;
+        }
+
+        using var context = DbFactory.CreateDbContext();
+        var userId = (await AuthenticationStateProvider.GetAuthenticationStateAsync())
+            ?.User.FindFirst(ClaimTypes.NameIdentifier)
+            ?.Value;
+
+        var circuit = await context.UserCircuits
+            .Include(e => e.Author)
+            .Include(e => e.CircuitOperations)
+            .AsNoTracking()
+            .Where(e => e.Id == CircuitId)
+            .Select(e => new UserCircuitItem()
+                {
+                    Id = e.Id,
+                    Name = e.Name,
+                    AuthorName = e.Author == null ? null : e.Author.UserName,
+                    IsOwn = e.Author != null && e.Author.Id == userId,
+                    IsFavorite = userId != null && e.UserFavorites.Any(e => e.Id == userId),
+                    Circuit = e.CircuitOperations,
+                })
+            .FirstOrDefaultAsync();
+        if (circuit is null)
+        {
+            Navigation.NavigateTo($"/", false);
+            return;
+        }
+
+        InitialCircuitItems = CircuitTransformer.Transform(circuit.Circuit);
+        CircuitName = circuit.Name;
+        IsOwn = circuit.IsOwn;
     }
 }

@@ -1,0 +1,116 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Qode.Infrastructure.Models
+@using Qode.Quantum
+@using Qode.Infrastructure
+@using System.Security.Claims
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField T="string" @bind-Value="Name" Label="Name" Va />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        @if (Id is not null)
+        {
+            <MudButton Color="Color.Warning" Disabled="@(string.IsNullOrWhiteSpace(Name))" OnClick="@(async () => await Save(true))">Replace</MudButton>
+        }
+        <MudButton Color="Color.Success" Disabled="@(string.IsNullOrWhiteSpace(Name))" OnClick="@(async () => await Save())">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public required List<List<Gate>> Circuit { get; set; }
+
+    [Parameter] public int? Id { get; set; }
+
+    [Parameter] public string? InitialName { get; set; }
+
+    public string? Name { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+
+    async Task Save(bool replace = false)
+    {
+        if (string.IsNullOrWhiteSpace(Name))
+        {
+            MudDialog.Close(DialogResult.Ok<(int, string)?>(null));
+            return;
+        }
+
+        using var context = DbFactory.CreateDbContext();
+
+        var auth = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (auth is null)
+        {
+            MudDialog.Close(DialogResult.Ok<(int, string)?>(null));
+            return;
+        }
+
+        var nameIdentifier = auth.User.FindFirst(ClaimTypes.NameIdentifier);
+        if (nameIdentifier is null)
+        {
+            MudDialog.Close(DialogResult.Ok<(int, string)?>(null));
+            return;
+        }
+
+        var user = await context.Users.FindAsync(nameIdentifier.Value);
+
+        var circuitOperations = Circuit.Select(e =>
+            new CircuitOperation()
+            {
+                Gates = e,
+            })
+            .ToList();
+
+        int id = -1;
+        if (replace)
+        {
+            var userCircuit = await context.UserCircuits.FindAsync(Id);
+            if (userCircuit is null)
+            {
+                MudDialog.Close(DialogResult.Ok<(int, string)?>(null));
+                return;
+            }
+
+            id = Id.Value;
+            userCircuit.Name = Name;
+            userCircuit.CircuitOperations = circuitOperations;
+
+            await context.SaveChangesAsync();
+        }
+        else
+        {
+            var userCircuit = new UserCircuit()
+            {
+                Name = Name,
+                CircuitOperations = circuitOperations,
+                Author = user,
+            };
+
+            await context.UserCircuits.AddAsync(userCircuit);
+            await context.SaveChangesAsync();
+
+            id = userCircuit.Id;
+        }
+
+        try
+        {
+            MudDialog.Close(DialogResult.Ok<(int, string)?>((id, Name)));
+        }
+        catch
+        {
+            MudDialog.Close(DialogResult.Ok<(int, string)?>(null));
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        Name = InitialName;
+    }
+}

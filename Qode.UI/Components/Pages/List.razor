@@ -1,0 +1,251 @@
+﻿@page "/List"
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@using Qode.Infrastructure
+@using System.Security.Claims
+@using Qode.Infrastructure.Models
+@using Qode.Quantum
+@using Qode.UI.Models
+@using Qode.UI.Utils
+
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+
+<style>
+    .list-item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding-top: 32px;
+        padding-bottom: 32px;
+        width: 100%;
+    }
+
+    .search-bar {
+        padding-top: 20px;
+        padding-bottom: 20px;
+    }
+
+    .search-text {
+        max-width: 300px;
+        margin-right: 44px;
+    }
+
+    .list-card {
+        cursor: pointer;
+    }
+
+    .system-item {
+        border: 1px solid var(--mud-palette-text-primary);
+    }
+
+    .favorite-item {
+        border: 1px solid var(--mud-palette-warning);
+    }
+
+    .own-item {
+        border: 1px solid var(--mud-palette-info);
+    }
+
+    .circuit-area {
+        max-width: 72vw;
+        overflow-x: hidden;
+        max-height: 20vh;
+        overflow-y: hidden;
+        padding: 10px;
+    }
+</style>
+
+<PageTitle>Qode</PageTitle>
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudPaper Class="list-item search-bar">
+            <MudTextField Class="search-text" @bind-Value="SearchString" Label="Circuit name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Search">Search</MudButton>
+        </MudPaper>
+    </MudItem>
+    @foreach (var item in Items)
+    {
+        <MudItem xs="12">
+            <MudPaper Class="list-item">
+                <MudCard Class="@GetItemClass(item)" onclick="@(() => NavigateToCircuit(item))">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">@item.Name</MudText>
+                            <MudText Typo="Typo.body2">@item.AuthorName</MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <AuthorizeView>
+                                <Authorized>
+                                    @if (item.IsOwn)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="(async () => await DeleteUserCircuit(item))" />
+                                    }
+                                    else
+                                    {
+                                        if (item.IsFavorite)
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Filled.Star" Color="Color.Warning" OnClick="(async () => await ToggleFavorite(item))" />
+                                        }
+                                        else
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Filled.StarOutline" Color="Color.Default" OnClick="(async () => await ToggleFavorite(item))" />
+                                        }
+                                    }
+                                </Authorized>
+                            </AuthorizeView>
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <div class="circuit-area">
+                            <CircuitArea CircuitItems="@CircuitTransformer.Transform(item.Circuit)" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudPaper>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    [Inject] private IDialogService DialogService { get; set; }
+
+    public string? SearchString { get; set; }
+
+    private List<UserCircuitItem> Items { get; set; } = [];
+
+    private void NavigateToCircuit(UserCircuitItem circuit)
+    {
+        Navigation.NavigateTo($"Circuit/{circuit.Id}", true);
+    }
+
+    private async Task<List<UserCircuitItem>> LoadData(DbSet<UserCircuit> set, string? userId)
+    {
+        return await set
+            .Include(e => e.Author)
+            .Include(e => e.UserFavorites)
+            .Include(e => e.CircuitOperations)
+            .AsNoTracking()
+            .Where(e => SearchString == null || e.Name.Contains(SearchString))
+            .OrderByDescending(e => e.Author != null && e.Author.Id == userId)
+            .ThenByDescending(e => e.UserFavorites.Any(e => e.Id == userId))
+            .ThenBy(e => e.Author != null)
+            .ThenByDescending(e => e.UserFavorites.Count)
+            .Select(e => new UserCircuitItem()
+            {
+                Id = e.Id,
+                Name = e.Name,
+                AuthorName = e.Author == null ? null : e.Author.UserName,
+                IsOwn = e.Author != null && e.Author.Id == userId,
+                IsFavorite = userId != null && e.UserFavorites.Any(e => e.Id == userId),
+                Circuit = e.CircuitOperations,
+            })
+            .ToListAsync();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        var userId = (await AuthenticationStateProvider.GetAuthenticationStateAsync())
+            ?.User.FindFirst(ClaimTypes.NameIdentifier)
+            ?.Value;
+
+        Items = await LoadData(context.UserCircuits, userId);
+
+        await base.OnInitializedAsync();
+    }
+
+    private async Task Search()
+    {
+        Items.Clear();
+
+        using var context = DbFactory.CreateDbContext();
+        var userId = (await AuthenticationStateProvider.GetAuthenticationStateAsync())
+            ?.User.FindFirst(ClaimTypes.NameIdentifier)
+            ?.Value;
+
+        Items = await LoadData(context.UserCircuits, userId);
+    }
+
+    private async Task DeleteUserCircuit(UserCircuitItem item)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            item.Name,
+            "Confirm that you want to delete the circuit",
+            yesText: "Delete", cancelText: "Cancel");
+        if (result is null || !result.Value)
+        {
+            return;
+        }
+
+        using var context = DbFactory.CreateDbContext();
+
+        var userCircuit = await context.UserCircuits.FindAsync(item.Id);
+        if (userCircuit is null)
+        {
+            Items.Remove(item);
+            return;
+        }
+
+        context.UserCircuits.Remove(userCircuit);
+        await context.SaveChangesAsync();
+
+        Items.Remove(item);
+    }
+
+    private async Task ToggleFavorite(UserCircuitItem item)
+    {
+        using var context = DbFactory.CreateDbContext();
+
+        var userCircuit = await context.UserCircuits
+            .Include(e => e.UserFavorites)
+            .FirstOrDefaultAsync(e => e.Id == item.Id);
+        if (userCircuit is null)
+        {
+            Items.Remove(item);
+            return;
+        }
+
+        var user = await context.Users.FindAsync(
+            (await AuthenticationStateProvider.GetAuthenticationStateAsync())
+            ?.User.FindFirst(ClaimTypes.NameIdentifier)
+            ?.Value);
+        if (user is null)
+        {
+            return;
+        }
+
+        if (item.IsFavorite)
+        {
+            userCircuit.UserFavorites.Remove(user);
+        }
+        else
+        {
+            userCircuit.UserFavorites.Add(user);
+        }
+
+        await context.SaveChangesAsync();
+
+        var listItem = Items.Find(e => e.Id == item.Id);
+        if (listItem is null)
+        {
+            return;
+        }
+
+        listItem.IsFavorite = !item.IsFavorite;
+    }
+
+    private string GetItemClass(UserCircuitItem item)
+    {
+        if (item.IsOwn) return "list-card own-item";
+        if (item.AuthorName is null) return "list-card system-item";
+        if (item.IsFavorite) return "list-card favorite-item";
+
+        return "list-card";
+    }
+}

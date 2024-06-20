@@ -18,7 +18,7 @@ namespace Qode.Quantum
 
     public class Circuit
     {
-        private readonly Random _random;
+        private readonly Random _random = new Random();
 
         private Circuit()
         {
@@ -26,20 +26,19 @@ namespace Qode.Quantum
 
         public Circuit(int numberOfQubits)
         {
-            // ToDo: Collapse should be its own class
-            _random = new Random();
-
             NumberOfQubits = numberOfQubits;
-
-            // Start with the first qubit, compute a tensor product with subsequent ones
-            OriginalState = new Qubit().Vector;
-            for (int i = 1; i < numberOfQubits; i++)
-            {
-                OriginalState = OriginalState.TensorProduct(new Qubit().Vector);
-            }
-
-            State = OriginalState;
+            Initialize();
         }
+
+        public Circuit(int numberOfQubits, List<List<Gate>> circuit)
+        {
+            NumberOfQubits = numberOfQubits;
+            Initialize();
+
+            Load(circuit);
+        }
+
+        public static readonly int MaxNumberOfQubits = 12;
 
         public int NumberOfQubits = 0;
 
@@ -49,7 +48,27 @@ namespace Qode.Quantum
 
         public Matrix<Complex>? U { get; private set; }
 
-        public Matrix<Complex> State { get; private set; }
+        public Matrix<Complex> State { get; set; }
+
+        private void Initialize()
+        {
+            // Start with the first qubit, compute a tensor product with subsequent ones
+            OriginalState = new Qubit().Vector;
+            for (int i = 1; i < NumberOfQubits; i++)
+            {
+                OriginalState = OriginalState.TensorProduct(new Qubit().Vector);
+            }
+
+            State = OriginalState;
+        }
+
+        public void Load(List<List<Gate>> circuit)
+        {
+            foreach (var operation in circuit)
+            {
+                Operation(operation);
+            }
+        }
 
         public void Operation(Gate[,] operations)
         {
@@ -94,12 +113,41 @@ namespace Qode.Quantum
             State = ComputeOperations(OriginalState, U);
         }
 
-        public double[] GetProbabilities()
+        public double[] GetProbabilitiesOfStates()
         {
             var probabilities = new double[State.Rows];
             for (int i = 0; i < State.Rows; i++)
             {
                 probabilities[i] = Complex.Pow(Complex.Abs(State[i, 0]), 2).Real;
+            }
+
+            return probabilities;
+        }
+
+        public double[] GetProbabilitiesOfQubits()
+        {
+            var probabilities = new double[NumberOfQubits];
+            for (int i = 0; i < NumberOfQubits; i++)
+            {
+                int power = (int)Math.Pow(2, NumberOfQubits - 1 - i);
+
+                // Probability of bit 1
+                int bit = 1;
+
+                double probability = 0.0;
+                for (int j = 0; j < State.Rows; j++)
+                {
+                    // Skip if state is not related to the bit
+                    // i.e. measuring for q1 = 0, skip 10, 11 
+                    if (j / power % 2 != bit)
+                    {
+                        continue;
+                    }
+
+                    probability += Complex.Pow(Complex.Abs(State[j, 0]), 2).Real;
+                }
+
+                probabilities[i] = probability;
             }
 
             return probabilities;

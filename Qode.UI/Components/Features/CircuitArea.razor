@@ -1,0 +1,82 @@
+﻿@using Qode.Quantum
+@using Qode.UI.Models
+
+<style>
+    .wire:before {
+        content: '';
+        position: absolute;
+        left: 56px;
+        width: 100vw;
+        border-top: 1px solid var(--mud-palette-primary-lighten);
+        transform: translateY(-50%);
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    .gate {
+        padding: 0;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1;
+        cursor: pointer;
+    }
+
+    .gate-active {
+        box-shadow: var(--mud-elevation-5);
+        user-select: none;
+    }
+
+    .gate-identity {
+        background-color: var(--mud-palette-background);
+        color: transparent;
+        user-select: none;
+        z-index: 0;
+    }
+
+    .gate-span-1 {
+        height: 44px;
+    }
+
+    .gate-span-2 {
+        height: 100px;
+    }
+
+    .gate-span-3 {
+        height: 156px;
+    }
+</style>
+
+<MudStack Row="true">
+    @foreach (var operation in CircuitItems.Select((e, i) => new { Item = e, Index = i }))
+    {
+        <MudStack>
+            @foreach (var gate in CircuitItems[operation.Index].Select((e, i) => new { Item = e, Index = i }))
+            {
+                <MudPaper Class="@GetGateClass(gate.Item)"
+                          @onclick="_ => InvokeClickGate(operation.Index, gate.Index)">
+                    @gate.Item.Gate
+                </MudPaper>
+            }
+        </MudStack>
+    }
+</MudStack>
+
+@code {
+    [Parameter]
+    public required List<List<CircuitGate>> CircuitItems { get; set; }
+
+    [Parameter]
+    public Action<int, int>? ClickGate { get; set; }
+
+    private string GetGateClass(CircuitGate item) => item.Gate == Gate.I
+        ? "gate gate-span-1 gate-identity"
+        : $"gate gate-span-{item.Span} gate-active";
+
+    void InvokeClickGate(int operationIndex, int qubitIndex)
+    {
+        ClickGate?.Invoke(operationIndex, qubitIndex);
+    }
+}

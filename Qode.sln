@@ -11,9 +11,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Qode.LinearAlgebra", "Qode.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Qode.Tests.LinearAlgebra", "Qode.Tests.LinearAlgebra\Qode.Tests.LinearAlgebra.csproj", "{BD1563D2-35AD-4DEC-9DB5-8B21F36337D4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Qode.Infrastructure", "Qode.Infrastructure\Qode.Infrastructure.csproj", "{156A2D7A-0E61-4651-ADAC-556589C06764}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Qode.Infrastructure", "Qode.Infrastructure\Qode.Infrastructure.csproj", "{156A2D7A-0E61-4651-ADAC-556589C06764}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Qode.Tests.Quantum", "Qode.Tests.Quantum\Qode.Tests.Quantum.csproj", "{2B1E6619-32C2-45D7-9E3E-919820DAEF83}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Qode.Tests.Quantum", "Qode.Tests.Quantum\Qode.Tests.Quantum.csproj", "{2B1E6619-32C2-45D7-9E3E-919820DAEF83}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Qode.Application", "Qode.Application\Qode.Application.csproj", "{35D4A416-70CA-4511-B3BB-60CD83BAC348}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{2B1E6619-32C2-45D7-9E3E-919820DAEF83}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2B1E6619-32C2-45D7-9E3E-919820DAEF83}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2B1E6619-32C2-45D7-9E3E-919820DAEF83}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35D4A416-70CA-4511-B3BB-60CD83BAC348}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35D4A416-70CA-4511-B3BB-60CD83BAC348}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35D4A416-70CA-4511-B3BB-60CD83BAC348}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35D4A416-70CA-4511-B3BB-60CD83BAC348}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

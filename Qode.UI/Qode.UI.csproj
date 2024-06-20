@@ -7,14 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Remove="Components\Pages\Register.razor" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="MudBlazor" Version="6.19.1" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Qode.Infrastructure\Qode.Infrastructure.csproj" />
     <ProjectReference Include="..\Qode.Quantum\Qode.Quantum.csproj" />
   </ItemGroup>
 
@@ -23,16 +20,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <_ContentIncludedByDefault Remove="Components\Pages\List.razor" />
     <_ContentIncludedByDefault Remove="Components\Pages\Main.razor" />
-    <_ContentIncludedByDefault Remove="Components\Pages\Register.razor" />
   </ItemGroup>
 
   <ItemGroup>
-    <UpToDateCheckInput Remove="Components\Pages\Register.razor" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Components\Pages\Register.razor" />
+    <UpToDateCheckInput Remove="Components\Pages\List.razor" />
   </ItemGroup>
 
 </Project>

@@ -1,27 +1,63 @@
-﻿@inherits LayoutComponentBase
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Qode.UI.Components.Account
+@inherits LayoutComponentBase
 
-<MudThemeProvider IsDarkMode="false" />
+@inject NavigationManager Navigation
+
+<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
 <MudLayout>
     <MudAppBar>
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(e => DrawerToggle())" />
-        Qode
+        <MudTooltip Text="List of circuits">
+            <MudNavLink Href="List">
+                <MudIconButton Icon="@Icons.Material.Filled.FormatListBulleted" Color="Color.Inherit" Edge="Edge.Start" />
+            </MudNavLink>
+        </MudTooltip>
+        <MudText Typo="Typo.h4">
+            <MudNavLink Href="/">
+                Qode
+            </MudNavLink>
+        </MudText>
+        <MudSpacer />
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
+                </div>
+                <div class="nav-item px-3">
+                    <form action="Account/Logout" method="post">
+                        <AntiforgeryToken />
+                        <button type="submit" class="nav-link">
+                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
+                        </button>
+                    </form>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <MudNavLink OnClick="@(() => Navigation.NavigateTo("Account/Register", true))">
+                        Register
+                    </MudNavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <MudNavLink OnClick="@(() => Navigation.NavigateTo("Account/Login", true))">
+                        Login
+                    </MudNavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+        <MudSwitch @bind-Value="@_isDarkMode" Color="Color.Primary" Class="ma-4" T="bool">
+            <MudIcon Icon="@Icons.Material.Filled.DarkMode" />
+        </MudSwitch>
     </MudAppBar>
-    <MudDrawer @bind-Open="@_drawerOpen">
-        <NavMenu/>
-    </MudDrawer>
     <MudMainContent>
         @Body
     </MudMainContent>
 </MudLayout>
 
 @code {
-    bool _drawerOpen = true;
-
-    void DrawerToggle()
-    {
-        _drawerOpen = !_drawerOpen;
-    }
+    private MudTheme _theme = new();
+    private bool _isDarkMode;
 }
