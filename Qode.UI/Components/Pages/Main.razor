@@ -3,6 +3,7 @@
 
 @rendermode InteractiveServer
 
+@using ApexCharts
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using MudBlazor
@@ -23,6 +24,22 @@
 <PageTitle>Qode</PageTitle>
 
 <style>
+    .simulation {
+        max-width: 100vw;
+    }
+    
+    .simulation-info-block {
+        min-height: 420px;
+    }
+
+    .simulation-info-block svg {
+        background: none !important;
+    }
+
+    .simulation-result {
+        text-align: center;
+    }
+
     .simulation-result p {
         display: ruby;
     }
@@ -30,15 +47,15 @@
 
 <MudPaper Class="pa-3">
     <MudToolBar Class="gap-4">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Simulate">Simulate</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="Clear">Clear</MudButton>
+        <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="Simulate">Simulate</MudButton>
+        <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Warning" OnClick="Clear">Clear</MudButton>
         <AuthorizeView>
             <Authorized>
-                <MudButton Variant="Variant.Filled" Color="Color.Default" @onclick="OpenSaveDialog">Save</MudButton>
+                <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Default" @onclick="OpenSaveDialog">Save</MudButton>
             </Authorized>
             <NotAuthorized>
                 <MudTooltip Text="Login to save circuit">
-                    <MudButton Variant="Variant.Filled" Color="Color.Default" Disabled="true">Save</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Default" Disabled="true">Save</MudButton>
                 </MudTooltip>
             </NotAuthorized>
         </AuthorizeView>
@@ -59,45 +76,39 @@
 
 @if (SimulationResults is not null)
 {
-    <MudGrid Class="pa-3">
-        <MudItem xs="3">
-            <MudPaper Class="pa-3">
-                <MudChart
-                    ChartType="ChartType.Bar"
-                    ChartSeries="@SimulationStateProbabilities"
-                    XAxisLabels="@(SimulationStateProbabilities.First().Data.Length > 16
-                        ? []
-                        : Enumerable.Range(1, SimulationStateProbabilities.First().Data.Length + 1).Select(i => $"S{i}").ToArray())"
-                    ChartOptions="@(new() { YAxisTicks = 5, MaxNumYAxisTicks = 15, ChartPalette = [Colors.Amber.Default] })"
-                    Width="100%"
-                    Height="350px" />
+    <MudGrid Class="pa-1 simulation">
+        <MudItem xs="5">
+            <MudPaper Class="pa-3 simulation-info-block">
+                <ApexChart
+                    Title="State Probabilities"
+                    TItem="SimulationState"
+                    Options="SimulationStatesChartOptions"
+                    Height="380"
+                    @ref="ChartSimulationStates">
+                    <ApexPointSeries
+                        Name="Probability"
+                        Items="SimulationStates"
+                        XValue="@(e => StateDisplay.FromIndex(e.Index, _circuit.NumberOfQubits))"
+                        YAggregate="@(e => e.Sum(e => e.Value))"
+                        SeriesType="SeriesType.Bar" />
+                </ApexChart>
             </MudPaper>
         </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="pa-3">
-                <MudChart
-                    ChartType="ChartType.Bar"
-                    ChartSeries="@SimulationQubitProbabilities"
-                    XAxisLabels="@(Enumerable.Range(1, _circuit.NumberOfQubits + 1).Select(i => $"Q{i}").ToArray())"
-                    ChartOptions="@(new() { YAxisTicks = 5, MaxNumYAxisTicks = 15 })"
-                    Width="100%"
-                    Height="350px" />
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="pa-3">
-                <MudList>
-                    <MudListSubheader>
-                        Results
-                        
+        <MudItem xs="2">
+            <MudPaper Class="pa-3 simulation-info-block">
+                <MudList Class="pa-0">
+                    <MudListSubheader Class="pa-0">
+                        <MudText Typo="Typo.subtitle1">
+                            <b>Results</b>
+                        </MudText>
                     </MudListSubheader>
                     @foreach ((bool result, int index) in SimulationResults.Select((e, i) => (e, i)))
                     {
-                        <MudListItem Class="simulation-result">
+                        <MudListItem Class="pa-0 simulation-result">
                             <MudText Typo="Typo.body1">Q</MudText>
                             <MudText Typo="Typo.body2">@(index + 1)</MudText>
                             <MudText Typo="Typo.body1"> = </MudText>
-                            <MudChip Color="@(result ? Color.Success : Color.Error)">
+                            <MudChip Color="@(result ? MudBlazor.Color.Success : MudBlazor.Color.Error)">
                                 @(result ? "1" : "0")
                             </MudChip>
                         </MudListItem>
@@ -106,15 +117,27 @@
                 </MudList>
             </MudPaper>
         </MudItem>
-        <MudItem xs="3">
-            <MudPaper Class="pa-3">
-                <MudChart
-                    ChartType="ChartType.Bar"
-                    ChartSeries="@SimulationResultsDistribution"
-                    XAxisLabels="@(Enumerable.Range(1, _circuit.NumberOfQubits + 1).Select(i => $"Q{i}").ToArray())"
-                    ChartOptions="@(new() { YAxisTicks = 5, MaxNumYAxisTicks = 15, ChartPalette = [Colors.DeepPurple.Default] })"
-                    Width="100%"
-                    Height="350px" />
+        <MudItem xs="5">
+            <MudPaper Class="pa-3 simulation-info-block">
+                <ApexChart
+                    Title="Qubits"
+                    TItem="SimulationQubit"
+                    Options="SimulationQubitsChartOptions"
+                    Height="380"
+                    @ref="ChartSimulationQubits">
+                    <ApexPointSeries
+                        Name="Probability"
+                        Items="SimulationQubits"
+                        XValue="@(e => $"Q{e.Index + 1}")"
+                        YAggregate="@(e => e.Sum(e => e.Probability))"
+                        SeriesType="SeriesType.Bar" />
+                    <ApexPointSeries
+                        Name="Distribution"
+                        Items="SimulationQubits"
+                        XValue="@(e => $"Q{e.Index + 1}")"
+                        YAggregate="@(e => e.Sum(e => e.Distribution))"
+                        SeriesType="SeriesType.Bar" />
+                </ApexChart>
             </MudPaper>
         </MudItem>
     </MudGrid>
@@ -124,6 +147,11 @@
     [Parameter]
     public int? CircuitId { get; set; }
 
+    [CascadingParameter]
+    protected MudThemeProvider? ThemeProvider { get; set; }
+
+    private bool IsDarkTheme { get; set; }
+
     private static readonly int NumberOfShots = 100;
 
     private List<List<CircuitGate>>? InitialCircuitItems { get; set; }
@@ -132,34 +160,62 @@
 
     private Qode.UI.Components.Features.Circuit _circuit;
 
-    private List<ChartSeries> SimulationStateProbabilities { get; set; } = new()
-    {
-        new()
-        {
-            Name = "State Probabilities",
-            Data = null,
-        }
-    };
-
-    private List<ChartSeries> SimulationQubitProbabilities { get; set; } = new()
-    {
-        new()
-        {
-            Name = "Qubit Probabilities",
-            Data = null,
-        }
-    };
+    private IEnumerable<SimulationState> SimulationStates { get; set; } = [];
+    private ApexChart<SimulationState>? ChartSimulationStates;
+    private ApexChartOptions<SimulationState>? SimulationStatesChartOptions;
 
     private IEnumerable<bool>? SimulationResults { get; set; }
 
-    private List<ChartSeries> SimulationResultsDistribution { get; set; } = new()
+    private List<SimulationQubit> SimulationQubits { get; set; } = [];
+    private ApexChart<SimulationQubit>? ChartSimulationQubits;
+    private ApexChartOptions<SimulationQubit>? SimulationQubitsChartOptions;
+
+    private static ApexChartOptions<T> CreateChartOptions<T>() where T : class
     {
-        new()
+        return new()
         {
-            Name = $"Results Distribution ({NumberOfShots} shots)",
-            Data = null,
-        }
-    };
+            Chart = new()
+            {
+                Toolbar = new()
+                {
+                    Show = false,
+                },
+                Selection = new()
+                {
+                    Enabled = false,
+                },
+                Zoom = new()
+                {
+                    Enabled = false,  
+                },
+            },
+            Xaxis = new()
+            {
+                Labels = new()
+                {
+                    Rotate = -30,
+                    HideOverlappingLabels = true,
+                },
+            },
+            Yaxis = new()
+            {
+                new()
+                {
+                    Min = 0.0m,
+                    // Max = 100.0m,
+                    Labels = new()
+                    {
+                        Formatter = @"e => `${e}%`",
+                    },
+                },
+            },
+            Theme = new Theme
+            {
+                Mode = Mode.Light,
+                Palette = PaletteType.Palette1,
+            },
+        };
+    }
 
     private async Task OpenSaveDialog()
     {
@@ -204,46 +260,53 @@
     {
         _circuit.Clear();
 
-        SimulationStateProbabilities.First().Data = null;
-        SimulationQubitProbabilities.First().Data = null;
+        SimulationStates = [];
         SimulationResults = null;
-        SimulationResultsDistribution.First().Data = null;
+        SimulationQubits = [];
 
         InitialCircuitItems = null;
     }
 
-    private void Simulate()
+    private async Task Simulate()
     {
         if (_circuit.NumberOfQubits < 2)
         {
             return;
         }
 
+        bool df = IsDarkTheme;
+
         var quantumCircuit = new Qode.Quantum.Circuit(_circuit.NumberOfQubits, _circuit.GetCircuit());
         var state = new Matrix<Complex>(quantumCircuit.State);
 
-        var stateProbabilities = quantumCircuit
+        SimulationStates = quantumCircuit
             .GetProbabilitiesOfStates()
-            .Select(e => e * 100.0)
-            .ToArray();
-        SimulationStateProbabilities.First().Data = stateProbabilities;
+            .Select((e, i) => new SimulationState(i, (decimal)e * 100.0m));
 
-        var qubitProbabilities = quantumCircuit
+        SimulationQubits = quantumCircuit
             .GetProbabilitiesOfQubits()
-            .Select(e => e * 100.0)
-            .ToArray();
-        SimulationQubitProbabilities.First().Data = qubitProbabilities;
+            .Select((e, i) => new SimulationQubit(i, (decimal)e * 100.0m ))
+            .ToList();
 
         SimulationResults = Enumerable.Range(0, _circuit.NumberOfQubits).Select(e => quantumCircuit.Measure(e));
-
-        SimulationResultsDistribution.First().Data = new double[_circuit.NumberOfQubits];
         for (int i = 0; i < NumberOfShots; i++)
         {
             quantumCircuit.State = new Matrix<Complex>(state);
             for (int qubit = 0; qubit < _circuit.NumberOfQubits; qubit++)
             {
-                SimulationResultsDistribution.First().Data[qubit] += quantumCircuit.Measure(qubit) ? 100.0 / NumberOfShots : 0.0;
+                var measurement = quantumCircuit.Measure(qubit);
+                SimulationQubits[qubit].Distribution += measurement ? 100.0m / NumberOfShots : 0.0m;
             }
+        }
+
+        if (ChartSimulationStates is not null)
+        {
+            await ChartSimulationStates.UpdateSeriesAsync(true);
+        }
+
+        if (ChartSimulationQubits is not null)
+        {
+            await ChartSimulationQubits.UpdateSeriesAsync(true);
         }
     }
 
@@ -284,4 +347,45 @@
         CircuitName = circuit.Name;
         IsOwn = circuit.IsOwn;
     }
+
+    protected override void OnInitialized()
+    {
+        SimulationStatesChartOptions = CreateChartOptions<SimulationState>();
+        SimulationQubitsChartOptions = CreateChartOptions<SimulationQubit>();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || ThemeProvider is null)
+        {
+            return;
+        }
+
+        var isDarkMode = ThemeProvider.IsDarkMode;
+        if (SimulationStatesChartOptions is not null &&
+            SimulationQubitsChartOptions is not null)
+        {
+            SimulationStatesChartOptions.Theme.Mode = isDarkMode ? Mode.Dark : Mode.Light;
+            SimulationQubitsChartOptions.Theme.Mode = isDarkMode ? Mode.Dark : Mode.Light;
+        }
+
+        // await ThemeProvider.WatchSystemPreference(OnSystemPreferenceChanged);
+    }
+
+    /*
+    private async Task OnSystemPreferenceChanged(bool isDarkMode)
+    {
+        if (SimulationStatesChartOptions is not null &&
+            SimulationQubitsChartOptions is not null &&
+            ChartSimulationStates is not null &&
+            ChartSimulationQubits is not null)
+        {
+            SimulationStatesChartOptions.Theme.Mode = isDarkMode ? Mode.Dark : Mode.Light;
+            SimulationQubitsChartOptions.Theme.Mode = isDarkMode ? Mode.Dark : Mode.Light;
+
+            await ChartSimulationStates.UpdateSeriesAsync(true);
+            await ChartSimulationQubits.UpdateSeriesAsync(true);
+        }
+    }
+    */
 }

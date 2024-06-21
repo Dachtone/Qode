@@ -121,7 +121,7 @@
 
     private void NavigateToCircuit(UserCircuitItem circuit)
     {
-        Navigation.NavigateTo($"Circuit/{circuit.Id}", true);
+        Navigation.NavigateTo($"Circuit/{circuit.Id}");
     }
 
     private async Task<List<UserCircuitItem>> LoadData(DbSet<UserCircuit> set, string? userId)

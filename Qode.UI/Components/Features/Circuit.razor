@@ -8,6 +8,7 @@
         background-color: var(--mud-palette-background);
         /* overflow-y: auto; */
         /* max-height: 480px; */
+        padding-right: 16px;
     }
 
     .circuit-gates {
@@ -23,10 +24,11 @@
         content: '';
         position: absolute;
         left: 56px;
-        width: 100vw;
+        width: 96vw;
         border-top: 1px solid var(--mud-palette-primary-lighten);
         transform: translateY(-50%);
         z-index: 0;
+        pointer-events: none;
     }
 
     .gate {
@@ -152,6 +154,14 @@
             return;
         }
 
+        // Setting a gate
+
+        if (SelectedItem == CircuitItems[operation][qubit])
+        {
+            // No changes required
+            return;
+        }
+
         int spanDifference = CircuitItems[operation][qubit].Span - SelectedItem.Span;
 
         // Add as many Identity gates as there are less spans
@@ -163,14 +173,9 @@
         // Replacing a gate
         CircuitItems[operation][qubit] = SelectedItem;
 
-        // Remove empty wires
-        if (spanDifference > 0)
-        {
-            CleanUpEmptyWires();
-        }
-
         // Remove gates that overlap with the new gate's span
-        for (int i = 0; i < SelectedItem.Span - 1; i++)
+        bool adjustedSpans = false;
+        for (int i = 0; i < -spanDifference; i++)
         {
             if (qubit + 1 >= CircuitItems[operation].Count)
             {
@@ -178,9 +183,36 @@
                 break;
             }
 
+            int overlapSpans = CircuitItems[operation][qubit + 1].Span;
+
             // Remove the next gate after the new one
             // (because we're deleting items, the list shifts, so we always delete at the same index)
             CircuitItems[operation].RemoveAt(qubit + 1);
+
+            // Adjust for the number of spans cleared
+            i += overlapSpans - 1;
+            if (i >= -spanDifference)
+            {
+                // How many spans cleared over the required number
+                int spansOvercleared = i - (-spanDifference) + 1;
+                if (spansOvercleared <= 0)
+                {
+                    break;
+                }
+
+                adjustedSpans = true;
+                for (int j = 0; j < spansOvercleared; j++)
+                {
+                    // Adjust with Identity gates
+                    CircuitItems[operation].Insert(qubit + 1, CreateIdentityGate());
+                }
+            }
+        }
+
+        // Remove empty wires
+        if (spanDifference > 0 || adjustedSpans)
+        {
+            CleanUpEmptyWires();
         }
 
         // Add the Identity gate if the new gate is the last one
@@ -309,5 +341,5 @@
     }
 
     public int NumberOfOperations { get => CircuitItems.Count - 1; }
-    public int NumberOfQubits { get => CircuitItems.Count == 0 ? 0 : CircuitItems.First().Count - 1; }
+    public int NumberOfQubits { get => CircuitItems.Count == 0 ? 0 : CircuitItems.First().Aggregate(0, (a, e) => a + e.Span) - 1; }
 }

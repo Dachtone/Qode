@@ -4,7 +4,7 @@
 
 @inject NavigationManager Navigation
 
-<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
+<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
@@ -38,26 +38,34 @@
             <NotAuthorized>
                 <div class="nav-item px-3">
                     <MudNavLink OnClick="@(() => Navigation.NavigateTo("Account/Register", true))">
-                        Register
+                        <MudText Typo="Typo.button">Register</MudText>
                     </MudNavLink>
                 </div>
                 <div class="nav-item px-3">
                     <MudNavLink OnClick="@(() => Navigation.NavigateTo("Account/Login", true))">
-                        Login
+                        <MudText Typo="Typo.button">Login</MudText>
                     </MudNavLink>
                 </div>
             </NotAuthorized>
         </AuthorizeView>
-        <MudSwitch @bind-Value="@_isDarkMode" Color="Color.Primary" Class="ma-4" T="bool">
-            <MudIcon Icon="@Icons.Material.Filled.DarkMode" />
-        </MudSwitch>
+        <MudToggleIconButton
+            @bind-Toggled="@_isDarkMode"
+            Icon="@Icons.Material.Filled.DarkMode"
+            Color="@Color.Inherit"
+            ToggledIcon="@Icons.Material.Filled.LightMode"
+            ToggledColor="@Color.Default"
+            Class="ma-4" />
     </MudAppBar>
     <MudMainContent>
-        @Body
+        <CascadingValue Value="@_mudThemeProvider">
+            @Body
+        </CascadingValue>
     </MudMainContent>
 </MudLayout>
 
 @code {
+    private MudThemeProvider? _mudThemeProvider;
+
     private MudTheme _theme = new();
-    private bool _isDarkMode;
+    private bool _isDarkMode = false;
 }
