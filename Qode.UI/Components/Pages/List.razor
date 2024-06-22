@@ -134,7 +134,7 @@
             .Where(e => SearchString == null || e.Name.Contains(SearchString))
             .OrderByDescending(e => e.Author != null && e.Author.Id == userId)
             .ThenByDescending(e => e.UserFavorites.Any(e => e.Id == userId))
-            .ThenBy(e => e.Author != null)
+            .ThenByDescending(e => e.Author == null)
             .ThenByDescending(e => e.UserFavorites.Count)
             .Select(e => new UserCircuitItem()
             {

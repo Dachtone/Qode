@@ -3,18 +3,23 @@
 
 @rendermode InteractiveServer
 
-@using ApexCharts
+@using System.IO
+@using System.Numerics
+@using System.Text
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using MudBlazor
-@using Qode.Infrastructure
+@using ApexCharts
 @using Qode.LinearAlgebra
 @using Qode.Quantum
+@using Qode.Infrastructure
 @using Qode.UI.Models
-@using System.Security.Claims
 @using Qode.UI.Utils
-@using System.Numerics
 
+@inject IJSRuntime JS
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
@@ -48,7 +53,8 @@
 <MudPaper Class="pa-3">
     <MudToolBar Class="gap-4">
         <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" OnClick="Simulate">Simulate</MudButton>
-        <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Warning" OnClick="Clear">Clear</MudButton>
+        <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Error" OnClick="Clear">Clear</MudButton>
+        <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Warning" OnClick="Export">Export</MudButton>
         <AuthorizeView>
             <Authorized>
                 <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Default" @onclick="OpenSaveDialog">Save</MudButton>
@@ -265,6 +271,23 @@
         SimulationQubits = [];
 
         InitialCircuitItems = null;
+    }
+
+    private async Task Export()
+    {
+        var circuitBytes = JsonSerializer.SerializeToUtf8Bytes(_circuit.GetCircuit(), new JsonSerializerOptions()
+        {
+            Converters =
+            {
+                new JsonStringEnumConverter(),
+            },
+        });
+
+        var stream = new MemoryStream(circuitBytes);
+        using var streamRef = new DotNetStreamReference(stream);
+
+        var fileName = $"qode-export-{CircuitName ?? $"{DateTime.Now:yyyy-MM-dd}"}.json";
+        await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
     }
 
     private async Task Simulate()
