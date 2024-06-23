@@ -11,14 +11,32 @@
 <MudLayout>
     <MudAppBar>
         <MudTooltip Text="List of circuits">
-            <MudNavLink Href="List">
-                <MudIconButton Icon="@Icons.Material.Filled.FormatListBulleted" Color="Color.Inherit" Edge="Edge.Start" />
-            </MudNavLink>
+            @if (Navigation.ToBaseRelativePath(Navigation.Uri).StartsWith("Account"))
+            {
+                <NavLink class="mud-nav-link mud-nav-link-text" href="List">
+                    <MudIconButton Icon="@Icons.Material.Filled.FormatListBulleted" Color="Color.Inherit" Edge="Edge.Start" />
+                </NavLink>
+            }
+            else
+            {
+                <MudNavLink Href="List">
+                    <MudIconButton Icon="@Icons.Material.Filled.FormatListBulleted" Color="Color.Inherit" Edge="Edge.Start" />
+                </MudNavLink>
+            }
         </MudTooltip>
         <MudText Typo="Typo.h4">
-            <MudNavLink Href="/">
-                Qode
-            </MudNavLink>
+            @if (Navigation.ToBaseRelativePath(Navigation.Uri).StartsWith("Account"))
+            {
+                <NavLink class="mud-nav-link mud-nav-link-text" href="/">
+                    Qode
+                </NavLink>
+            }
+            else
+            {
+                <MudNavLink Href="/">
+                    Qode
+                </MudNavLink>
+            }
         </MudText>
         <MudSpacer />
         <AuthorizeView>
@@ -37,14 +55,32 @@
             </Authorized>
             <NotAuthorized>
                 <div class="nav-item px-3">
-                    <MudNavLink OnClick="@(() => Navigation.NavigateTo("Account/Register", true))">
-                        <MudText Typo="Typo.button">Register</MudText>
-                    </MudNavLink>
+                    @if (Navigation.ToBaseRelativePath(Navigation.Uri).StartsWith("Account"))
+                    {
+                        <NavLink class="mud-nav-link mud-nav-link-text" href="Account/Register">
+                            <MudText Typo="Typo.button">Register</MudText>
+                        </NavLink>
+                    }
+                    else
+                    {
+                        <MudNavLink OnClick="@(() => Navigation.NavigateTo("Account/Register", true))">
+                            <MudText Typo="Typo.button">Register</MudText>
+                        </MudNavLink>
+                    }
                 </div>
                 <div class="nav-item px-3">
-                    <MudNavLink OnClick="@(() => Navigation.NavigateTo("Account/Login", true))">
-                        <MudText Typo="Typo.button">Login</MudText>
-                    </MudNavLink>
+                    @if (Navigation.ToBaseRelativePath(Navigation.Uri).StartsWith("Account"))
+                    {
+                        <NavLink class="mud-nav-link mud-nav-link-text" href="Account/Login">
+                            <MudText Typo="Typo.button">Register</MudText>
+                        </NavLink>
+                    }
+                    else
+                    {
+                        <MudNavLink OnClick="@(() => Navigation.NavigateTo("Account/Login", true))">
+                            <MudText Typo="Typo.button">Login</MudText>
+                        </MudNavLink>
+                    }
                 </div>
             </NotAuthorized>
         </AuthorizeView>
