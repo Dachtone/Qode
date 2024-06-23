@@ -26,7 +26,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
 # Copy build files
-COPY --from=build-stage /App/out .
+COPY --from=build-stage /app/out .
 
 # Run entry project
 ENTRYPOINT ["dotnet", "Qode.UI.dll"]
