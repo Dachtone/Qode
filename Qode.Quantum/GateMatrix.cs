@@ -41,7 +41,7 @@ namespace Qode.Quantum
                 }
             },
             {
-                Gate.FCNOT,
+                Gate.NOTC,
                 new Complex[,]
                 {
                     { 1, 0, 0, 0 },
@@ -51,7 +51,7 @@ namespace Qode.Quantum
                 }
             },
             {
-                Gate.PX,
+                Gate.X,
                 new Complex[,]
                 {
                     { 0, 1, },
@@ -75,7 +75,7 @@ namespace Qode.Quantum
                 }
             },
             {
-                Gate.X,
+                Gate.SX,
                 new Complex[,]
                 {
                     { new Complex(1, 1) / 2, new Complex(1, -1) / 2, },
